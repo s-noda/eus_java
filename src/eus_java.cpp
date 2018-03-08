@@ -54,6 +54,28 @@ int main() {
   std::cout << "  -- " << cs << std::endl;
   env->ReleaseStringUTFChars(js, cs);
 
+  jmethodID ivid = getm(env, cls, "iv", "([I)[I");
+  jintArray iv = env->NewIntArray(3);
+  int _iv[3]; for ( int i=0; i<3; i++ ) _iv[i] = i;
+  env->SetIntArrayRegion(iv, 0, 3, (jint*)_iv);
+  jintArray iv2 = (jintArray)(env->CallObjectMethod(obj, ivid, iv));
+  jint *_iv2 = env->GetIntArrayElements(iv2, 0);
+  std::cout << "  --";
+  for ( int i=0; i<3; i++ ) std::cout << " " << _iv2[i];
+  std::cout << std::endl;
+  env->ReleaseIntArrayElements(iv2, _iv2, 0);
+
+  jmethodID dvid = getm(env, cls, "dv", "([D)[D");
+  jdoubleArray dv = env->NewDoubleArray(3);
+  double _dv[3]; for ( int i=0; i<3; i++ ) _dv[i] = 3.14*i;
+  env->SetDoubleArrayRegion(dv, 0, 3, (jdouble*)_dv);
+  jdoubleArray dv2 = (jdoubleArray)(env->CallObjectMethod(obj, dvid, dv));
+  jdouble *_dv2 = env->GetDoubleArrayElements(dv2, 0);
+  std::cout << "  --";
+  for ( int i=0; i<3; i++ ) std::cout << " " << _dv2[i];
+  std::cout << std::endl;
+  env->ReleaseDoubleArrayElements(dv2, _dv2, 0);
+
   if(jvm->DestroyJavaVM()){
     std::cout << "JVM broken" << std::endl;
     return -1; }
