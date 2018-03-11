@@ -18,9 +18,10 @@ catkin_package()
 
 set(CMAKE_CXX_FLAGS "-std=c++0x -O3")
 
-add_executable(eus_java_test src/eus_java.cpp)
-target_link_libraries(eus_java_test ${JAVA_HOME}/jre/lib/amd64/server/libjvm.so)
-execute_process(COMMAND ln -snf ${CATKIN_DEVEL_PREFIX}/lib/eus_java/eus_java_test ${PROJECT_SOURCE_DIR}/eus_java_test)
+add_executable(test_eus_java src/test_eus_java.cpp)
+target_link_libraries(test_eus_java ${JAVA_HOME}/jre/lib/amd64/server/libjvm.so)
+execute_process(COMMAND ln -snf ${CATKIN_DEVEL_PREFIX}/lib/eus_java/test_eus_java ${PROJECT_SOURCE_DIR}/test_eus_java)
 
 add_library(eus_java SHARED src/eus_java.cpp)
+target_link_libraries(eus_java ${JAVA_HOME}/jre/lib/amd64/server/libjvm.so)
 execute_process(COMMAND ln -snf ${CATKIN_DEVEL_PREFIX}/lib/libeus_java.so ${PROJECT_SOURCE_DIR}/libeus_java.so)

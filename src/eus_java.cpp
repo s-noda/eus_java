@@ -1,84 +1,73 @@
 #include <jni.h>
 #include <iostream>
 #include <cassert>
+#include <vector>
 
-jmethodID getm(JNIEnv *env, jclass &cls, const char* name, const char* arg) {
-  jmethodID mid = env->GetMethodID(cls, name, arg);
-  std::cout << " find " << name << arg << std::endl;
-  assert(mid);
-  return mid; }
+namespace eus_java {
+  class func {
+  public:
+    jmethodID mid;
+    func(jmethodID _mid) : mid(_mid) {}
+  };
+  class cls {
+  public:
+    jclass c;
+    jobject o;
+    std::vector<func> fns;
+    cls(jclass _cls, jobject _obj) : o(_obj), c(_cls) {}
+    int add(func f) { this->fns.push_back(f); return this->fns.size() - 1; }
+  };
+};
 
-int main() {
+namespace eus_java {
   JNIEnv *env;
   JavaVM *jvm;
-
-  JavaVMOption options[1];
-  options[0].optionString = "-Djava.class.path=./java";
-
   JavaVMInitArgs vm_args;
-  vm_args.version = JNI_VERSION_1_6;
-  vm_args.options = options;
-  vm_args.nOptions = 1;
-  JNI_GetDefaultJavaVMInitArgs(&vm_args);
+  std::vector<eus_java::cls> clss;
+};
 
-  if ( JNI_CreateJavaVM(&jvm, (void **)&env, &vm_args) ) {
-    std::cout << "JVM dead" << std::endl;
-    return -1; }
-
-  jclass cls = env->FindClass("Test");
-  if(cls == 0){
-    std::cout << "test(class) not found" << std::endl;
-    return -1; }
-
-  jmethodID cns = env->GetMethodID(cls, "<init>", "(Ljava/lang/String;)V");
-  if(cns == NULL){
-    std::cout << "initialize fail" << std::endl;
-    return -1; }
-  jobject obj = env->NewObject(cls, cns, env->NewStringUTF("eus_java"));
-
-  // javap -s Test
-  jmethodID vid = getm(env, cls, "v", "()V");
-  env->CallVoidMethod(obj, vid);
-
-  jmethodID iid = getm(env, cls, "i", "(I)I");
-  int ji = (int)env->CallIntMethod(obj, iid, 3);
-  std::cout << "  -- " << ji << std::endl;
-
-  jmethodID did = getm(env, cls, "d", "(D)D");
-  double di = (double)env->CallDoubleMethod(obj, did, 3.14);
-  std::cout << "  -- " << di << std::endl;
-
-  jmethodID sid = getm(env, cls, "s", "(Ljava/lang/String;)Ljava/lang/String;");
-  jstring js = (jstring)(env->CallObjectMethod(obj, sid, env->NewStringUTF("noda")));
-  const char* cs = env->GetStringUTFChars(js, 0);
-  std::cout << "  -- " << cs << std::endl;
-  env->ReleaseStringUTFChars(js, cs);
-
-  jmethodID ivid = getm(env, cls, "iv", "([I)[I");
-  jintArray iv = env->NewIntArray(3);
-  int _iv[3]; for ( int i=0; i<3; i++ ) _iv[i] = i;
-  env->SetIntArrayRegion(iv, 0, 3, (jint*)_iv);
-  jintArray iv2 = (jintArray)(env->CallObjectMethod(obj, ivid, iv));
-  jint *_iv2 = env->GetIntArrayElements(iv2, 0);
-  std::cout << "  --";
-  for ( int i=0; i<3; i++ ) std::cout << " " << _iv2[i];
-  std::cout << std::endl;
-  env->ReleaseIntArrayElements(iv2, _iv2, 0);
-
-  jmethodID dvid = getm(env, cls, "dv", "([D)[D");
-  jdoubleArray dv = env->NewDoubleArray(3);
-  double _dv[3]; for ( int i=0; i<3; i++ ) _dv[i] = 3.14*i;
-  env->SetDoubleArrayRegion(dv, 0, 3, (jdouble*)_dv);
-  jdoubleArray dv2 = (jdoubleArray)(env->CallObjectMethod(obj, dvid, dv));
-  jdouble *_dv2 = env->GetDoubleArrayElements(dv2, 0);
-  std::cout << "  --";
-  for ( int i=0; i<3; i++ ) std::cout << " " << _dv2[i];
-  std::cout << std::endl;
-  env->ReleaseDoubleArrayElements(dv2, _dv2, 0);
-
-  if(jvm->DestroyJavaVM()){
-    std::cout << "JVM broken" << std::endl;
-    return -1; }
-
-  std::cout << "test passed" << std::endl;
-}
+extern "C" {
+  long eus_java_init_vmargs(char* _nm) {
+    std::string dp = "-Djava.class.path=";
+    std::string os = dp + std::string(_nm);
+    if ( eus_java::vm_args.nOptions == 0 ) {
+      JNI_GetDefaultJavaVMInitArgs(&eus_java::vm_args);
+      JavaVMOption options[1];
+      eus_java::vm_args.version = JNI_VERSION_1_6;
+      eus_java::vm_args.options = options;
+      eus_java::vm_args.nOptions = 1; }
+    eus_java::vm_args.options[0].optionString = const_cast<char*>(os.c_str());
+    std::cout << "class root change to " << eus_java::vm_args.options[0].optionString << std::endl;
+    return 0; }
+  long eus_java_create_vm() {
+    if ( JNI_CreateJavaVM(&eus_java::jvm, (void **)&eus_java::env, &eus_java::vm_args) ) {
+      std::cout << "JVM dead" << std::endl;
+      return -1; } else return 0; }
+  long eus_java_add_cls(char* _cls, char* _arg=const_cast<char*>("()V")) {
+    jclass cls = eus_java::env->FindClass(_cls);
+    if(cls == 0){
+      std::cout << _cls << "(class) not found" << std::endl;
+      return -1; }
+    jmethodID cns = eus_java::env->GetMethodID(cls, "<init>", _arg);
+    if(cns == NULL){
+      std::cout << "initialize fail" << std::endl;
+      return -1; }
+    jobject obj = eus_java::env->NewObject(cls, cns);
+    eus_java::clss.push_back(eus_java::cls(cls, obj));
+    return eus_java::clss.size() - 1; }
+  long eus_java_get_method(int cid, char* _fn, char* _arg) {
+    assert(cid < eus_java::clss.size());
+    jmethodID mid = eus_java::env->GetMethodID(eus_java::clss[cid].c, _fn, _arg);
+    return eus_java::clss[cid].add(eus_java::func(mid)); }
+  long eus_java_call_method(int cid, int fid) {
+    assert(cid < eus_java::clss.size());
+    eus_java::cls *c = &eus_java::clss[cid];
+    assert(fid < c->fns.size());
+    eus_java::env->CallVoidMethod(c->o, c->fns[fid].mid);
+    return 0; }
+  long eus_java_destroy_vm() {
+    if(!eus_java::jvm || eus_java::jvm->DestroyJavaVM()){
+      std::cout << "JVM broken" << std::endl;
+      return -1; }
+    return 0; }
+};
