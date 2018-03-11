@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cassert>
 #include <vector>
+#include "test_eus_java.cpp"
 
 namespace eus_java {
   class func {
@@ -30,13 +31,14 @@ extern "C" {
   long eus_java_init_vmargs(char* _nm) {
     std::string dp = "-Djava.class.path=";
     std::string os = dp + std::string(_nm);
-    if ( eus_java::vm_args.nOptions == 0 ) {
-      JNI_GetDefaultJavaVMInitArgs(&eus_java::vm_args);
-      JavaVMOption options[1];
-      eus_java::vm_args.version = JNI_VERSION_1_6;
-      eus_java::vm_args.options = options;
-      eus_java::vm_args.nOptions = 1; }
+    // if ( eus_java::vm_args.nOptions == 0 ) {
+    // JNI_GetDefaultJavaVMInitArgs(&eus_java::vm_args);
+    JavaVMOption options[1];
+    eus_java::vm_args.version = JNI_VERSION_1_6;
+    eus_java::vm_args.options = options;
     eus_java::vm_args.options[0].optionString = const_cast<char*>(os.c_str());
+    eus_java::vm_args.nOptions = 1;
+    eus_java::vm_args.ignoreUnrecognized = true;
     std::cout << "class root change to " << eus_java::vm_args.options[0].optionString << std::endl;
     return 0; }
   long eus_java_create_vm() {
@@ -70,4 +72,5 @@ extern "C" {
       std::cout << "JVM broken" << std::endl;
       return -1; }
     return 0; }
+  long eus_java_test1() { return eus_java::test1();}
 };
