@@ -4,9 +4,9 @@ cmake_minimum_required(VERSION 2.4.6)
 
 find_package(catkin COMPONENTS cmake_modules euslisp)
 
-set(JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64)
+set(JAVA_HOME /usr/lib/jvm/java-7-oracle)
 if(NOT EXISTS ${JAVA_HOME})
-  set(JAVA_HOME /usr/lib/jvm/java-7-oracle)
+  set(JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64)
 endif()
 if (NOT EXISTS ${JAVA_HOME})
   message(FATAL_ERROR "${JAVA_HOME} not found")
