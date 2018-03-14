@@ -25,9 +25,32 @@ namespace eus_java {
   JavaVM *jvm;
   JavaVMInitArgs vm_args;
   std::vector<eus_java::cls> clss;
+  std::vector<jvalue> fargs;
+  long __addfarg(jvalue &v) {
+    fargs.push_back(v); return fargs.size(); }
 };
 
-extern "C" {
+extern "C" { // function argument handle
+  long eus_java_fargs_clear() {
+    eus_java::fargs.clear(); return 0; }
+  long eus_java_fargs_add_long(long l) {
+    jvalue v; v.j = l; return eus_java::__addfarg(v); }
+  long eus_java_fargs_add_double(double d) {
+    jvalue v; v.d = d; return eus_java::__addfarg(v); }
+  long eus_java_fargs_add_string(char* _cl) {
+    jstring cl = eus_java::env->NewStringUTF(_cl);
+    jvalue v; v.l = cl; return eus_java::__addfarg(v); }
+  long eus_java_fargs_add_darray(long s, double* _dl) {
+    jdoubleArray dl = eus_java::env->NewDoubleArray(s);
+    eus_java::env->SetDoubleArrayRegion(dl, 0, s, _dl);
+    jvalue v; v.l = dl; return eus_java::__addfarg(v); }
+  long eus_java_fargs_add_larray(long s, long* _ll) {
+    jlongArray ll = eus_java::env->NewLongArray(s);
+    eus_java::env->SetLongArrayRegion(ll, 0, s, _ll);
+    jvalue v; v.l = ll; return eus_java::__addfarg(v); }
+};
+
+extern "C" { // jvm accessor
   long eus_java_create_vm(char* _nm) {
     std::string dp = "-Djava.class.path=";
     std::string os = dp + std::string(_nm);
@@ -39,19 +62,19 @@ extern "C" {
     eus_java::vm_args.ignoreUnrecognized = true;
     std::cout << "class root change to " << eus_java::vm_args.options[0].optionString << std::endl;
     if ( JNI_CreateJavaVM(&eus_java::jvm, (void **)&eus_java::env, &eus_java::vm_args) ) {
-      std::cout << "JVM dead" << std::endl;
-      return -1; }
+      std::cerr << "[eus_java] JNI_CreateJavaVM fail" << std::endl; return -1; }
+    std::cout << "[eus_java] JVM open" << std::endl;
     return 0; }
   long eus_java_add_cls(char* _cls, char* _arg=const_cast<char*>("()V")) {
     jclass cls = eus_java::env->FindClass(_cls);
     if(cls == 0){
-      std::cout << _cls << "(class) not found" << std::endl;
+      std::cerr << "[eus_java] class " << _cls << " not found" << std::endl;
       return -1; }
     jmethodID cns = eus_java::env->GetMethodID(cls, "<init>", _arg);
     if(cns == NULL){
-      std::cout << "initialize fail" << std::endl;
+      std::cerr << "[eus_java] constructor " << _cls << _arg << " not found" << std::endl;
       return -1; }
-    jobject obj = eus_java::env->NewObject(cls, cns);
+    jobject obj = eus_java::env->NewObjectA(cls, cns, &eus_java::fargs[0]);
     eus_java::clss.push_back(eus_java::cls(cls, obj));
     return eus_java::clss.size() - 1; }
   long eus_java_get_method(int cid, char* _fn, char* _arg) {
@@ -62,12 +85,13 @@ extern "C" {
     assert(cid < eus_java::clss.size());
     eus_java::cls *c = &eus_java::clss[cid];
     assert(fid < c->fns.size());
-    eus_java::env->CallVoidMethod(c->o, c->fns[fid].mid);
+    eus_java::env->CallVoidMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
     return 0; }
   long eus_java_destroy_vm() {
     if(!eus_java::jvm || eus_java::jvm->DestroyJavaVM()){
-      std::cout << "JVM broken" << std::endl;
+      std::cerr << "[eus_java] DestroyJavaVM fail" << std::endl;
       return -1; }
+    std::cout << "[eus_java] JVM close" << std::endl;
     return 0; }
   long eus_java_test1() { return eus_java::test1();}
 };
