@@ -28,23 +28,20 @@ namespace eus_java {
 };
 
 extern "C" {
-  long eus_java_init_vmargs(char* _nm) {
+  long eus_java_create_vm(char* _nm) {
     std::string dp = "-Djava.class.path=";
     std::string os = dp + std::string(_nm);
-    // if ( eus_java::vm_args.nOptions == 0 ) {
-    // JNI_GetDefaultJavaVMInitArgs(&eus_java::vm_args);
     JavaVMOption options[1];
+    options[0].optionString = const_cast<char*>(os.c_str());
     eus_java::vm_args.version = JNI_VERSION_1_6;
     eus_java::vm_args.options = options;
-    eus_java::vm_args.options[0].optionString = const_cast<char*>(os.c_str());
     eus_java::vm_args.nOptions = 1;
     eus_java::vm_args.ignoreUnrecognized = true;
     std::cout << "class root change to " << eus_java::vm_args.options[0].optionString << std::endl;
-    return 0; }
-  long eus_java_create_vm() {
     if ( JNI_CreateJavaVM(&eus_java::jvm, (void **)&eus_java::env, &eus_java::vm_args) ) {
       std::cout << "JVM dead" << std::endl;
-      return -1; } else return 0; }
+      return -1; }
+    return 0; }
   long eus_java_add_cls(char* _cls, char* _arg=const_cast<char*>("()V")) {
     jclass cls = eus_java::env->FindClass(_cls);
     if(cls == 0){
