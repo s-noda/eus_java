@@ -42,8 +42,8 @@ namespace eus_java {
     jmethodID vid = _getm(env, cls, "v", "()V");
     env->CallVoidMethod(obj, vid);
 
-    jmethodID iid = _getm(env, cls, "i", "(I)I");
-    int ji = (int)env->CallIntMethod(obj, iid, 3);
+    jmethodID iid = _getm(env, cls, "l", "(J)J");
+    long ji = (long)env->CallLongMethod(obj, iid, 3);
     std::cout << "  -- " << ji << std::endl;
 
     jmethodID did = _getm(env, cls, "d", "(D)D");
@@ -56,16 +56,16 @@ namespace eus_java {
     std::cout << "  -- " << cs << std::endl;
     env->ReleaseStringUTFChars(js, cs);
 
-    jmethodID ivid = _getm(env, cls, "iv", "([I)[I");
-    jintArray iv = env->NewIntArray(3);
-    int _iv[3]; for ( int i=0; i<3; i++ ) _iv[i] = i;
-    env->SetIntArrayRegion(iv, 0, 3, (jint*)_iv);
-    jintArray iv2 = (jintArray)(env->CallObjectMethod(obj, ivid, iv));
-    jint *_iv2 = env->GetIntArrayElements(iv2, 0);
+    jmethodID ivid = _getm(env, cls, "lv", "([J)[J");
+    jlongArray iv = env->NewLongArray(3);
+    long _iv[3]; for ( int i=0; i<3; i++ ) _iv[i] = i;
+    env->SetLongArrayRegion(iv, 0, 3, (jlong*)_iv);
+    jlongArray iv2 = (jlongArray)(env->CallObjectMethod(obj, ivid, iv));
+    jlong *_iv2 = env->GetLongArrayElements(iv2, 0);
     std::cout << "  --";
     for ( int i=0; i<3; i++ ) std::cout << " " << _iv2[i];
     std::cout << std::endl;
-    env->ReleaseIntArrayElements(iv2, _iv2, 0);
+    env->ReleaseLongArrayElements(iv2, _iv2, 0);
 
     jmethodID dvid = _getm(env, cls, "dv", "([D)[D");
     jdoubleArray dv = env->NewDoubleArray(3);
