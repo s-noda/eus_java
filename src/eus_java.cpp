@@ -67,11 +67,11 @@ extern "C" { // jvm accessor
     return 0; }
   long eus_java_add_cls(char* _cls, char* _arg=const_cast<char*>("()V")) {
     jclass cls = eus_java::env->FindClass(_cls);
-    if(cls == 0){
+    if(! cls){
       std::cerr << "[eus_java] class " << _cls << " not found" << std::endl;
       return -1; }
     jmethodID cns = eus_java::env->GetMethodID(cls, "<init>", _arg);
-    if(cns == NULL){
+    if(! cns){
       std::cerr << "[eus_java] constructor " << _cls << _arg << " not found" << std::endl;
       return -1; }
     jobject obj = eus_java::env->NewObjectA(cls, cns, &eus_java::fargs[0]);
@@ -80,6 +80,9 @@ extern "C" { // jvm accessor
   long eus_java_get_method(int cid, char* _fn, char* _arg) {
     assert(cid < eus_java::clss.size());
     jmethodID mid = eus_java::env->GetMethodID(eus_java::clss[cid].c, _fn, _arg);
+    if (! mid) {
+      std::cerr << "[eus_java] func " << _fn << _arg << " not found" << std::endl;
+      return -1;}
     return eus_java::clss[cid].add(eus_java::func(mid)); }
   long eus_java_call_method(int cid, int fid) {
     assert(cid < eus_java::clss.size());
