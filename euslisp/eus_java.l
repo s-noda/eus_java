@@ -34,6 +34,67 @@
   )
 (In-package "USER")
 
+(defvar eus_java::*type-str* #("V" "J" "D" "Ljava/lang/String;" "[J" "[D"))
+(defvar eus_java::*type-key* #(nil :long :double :string :larray :darray))
+
+(defun eus_java::arg-key2string
+  (k) (aref eus_java::*type-str* (position k eus_java::*type-key*)))
+(defun eus_java::arg-keylist2string
+  (argl ret)
+  (apply 'concatenate string "("
+	 (append (mapcar 'eus_java::arg-key2string argl)
+		 (list ")" (eus_java::arg-key2string ret)))))
+(defun eus_java::alphabet-symbol-list
+  (&optional (d 10) (st #\a))
+  (if (zerop d) nil
+    (cons (read-from-string (format nil "~c" st))
+	  (eus_java::alphabet-symbol-list (- d 1) (+ st 1)))))
+(defun eus_java::jdefun
+  (fname cid jfname jarg jret)
+  (let* ((arg (eus_java::arg-key2string jarg jret))
+	 (fid (eus_java::get-method cid jfname arg))
+	 (asym (eus_java::alphabet-symbol-list (length jarg))))
+    (list 'defun jfname (append asym '(&optional buf))
+	  '(eus_java::fargs-clear)
+	  (cons
+	   'progn
+	   (mapcar
+	    '(lambda (a s)
+	       (cond
+		((eq a :long) (list 'eus_java::fargs-add-long s))
+		((eq a :double) (list 'eus_java::fargs-add-double s))
+		((eq a :string) (list 'eus_java::fargs-add-string s))
+		((eq a :larray) (list 'eus_java::fargs-add-larray (list 'length s)) s)
+		((eq a :darray) (list 'eus_java::fargs-add-darray (list 'length s)) s)))
+	    jarg asym))
+	  (cond
+	   ((eq jret nil) (list 'eus_java::call-void-method cid fid))
+	   ((eq jret :long) (list 'eus_java::call-long-method cid fid))
+	   ((eq jret :double) (list 'eus_java::call-long-method cid fid))
+	   ((eq jret :string) (list 'eus_java::call-string-method cid fid))
+	   ((eq jret :larray) (list 'eus_java::call-larray-method cid fid))
+	   ((eq jret :darray) (list 'eus_java::call-darray-method cid fid)))
+	  (cond
+	   ((eq jret :long)
+	    '(let ((b #i(0))) (eus_java::return-long b) (aref b 0)))
+	   ((eq jret :double)
+	    '(let ((b #f(0))) (eus_java::return-double b) (aref b 0)))
+	   ((eq jret :string)
+	    '(let ((l (eus_java::return-string-length))
+		   (b (if (and (stringp buf) (>= (length buf) l))
+			  buf (instantiate string l))))
+	       (eus_java::return-string l b) b))
+	   ((eq jret :larray)
+	    '(let ((l (eus_java::return-larray-length))
+		   (b (if (and (integer-vector-p buf) (>= (length buf) l))
+			  buf (instantiate integer-vector l))))
+	       (eus_java::return-larray l b) b))
+	   ((eq jret :darray)
+	    '(let ((l (eus_java::return-darray-length))
+		   (b (if (and (float-vector-p buf) (>= (length buf) l))
+			  buf (instantiate float-vector l))))
+	       (eus_java::return-darray l b) b))))))
+
 (defclass eus_java::__func
   :super object
   :slots (cid fid fstr astr))
@@ -74,6 +135,12 @@
        (let ((b (instantiate float-vector (eus_java::return-darray-length))))
 	 (eus_java::return-darray (length b) b) b))))))
 
+#|
+(eus_java::create-vm (format nil "~A/java" (ros::rospack-find "eus_java")))
+(eus_java::fargs-clear)
+(setq eus_java::*test-cid* (eus_java::add-class "Test" "()V"))
+(eus_java::jdefun 'eus_java::test-v eus_java::*test-cid* "v" nil nil)
+|#
 
 (defun eus_java::test2
   nil
