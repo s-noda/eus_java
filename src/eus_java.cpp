@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cassert>
 #include <vector>
+#include <cstring>
 #include "test_eus_java.cpp"
 
 namespace eus_java {
@@ -26,13 +27,13 @@ namespace eus_java {
   JavaVMInitArgs vm_args;
   std::vector<eus_java::cls> clss;
   std::vector<jvalue> fargs;
+  jvalue fret;
   long __addfarg(jvalue &v) {
     fargs.push_back(v); return fargs.size(); }
 };
 
 extern "C" { // function argument handle
-  long eus_java_fargs_clear() {
-    eus_java::fargs.clear(); return 0; }
+  long eus_java_fargs_clear() { eus_java::fargs.clear(); return 0; }
   long eus_java_fargs_add_long(long l) {
     jvalue v; v.j = l; return eus_java::__addfarg(v); }
   long eus_java_fargs_add_double(double d) {
@@ -48,6 +49,61 @@ extern "C" { // function argument handle
     jlongArray ll = eus_java::env->NewLongArray(s);
     eus_java::env->SetLongArrayRegion(ll, 0, s, _ll);
     jvalue v; v.l = ll; return eus_java::__addfarg(v); }
+};
+
+extern "C" { // function ret handle
+  eus_java::cls *__eus_java_call_method(int cid, int fid) {
+    assert(cid < eus_java::clss.size());
+    eus_java::cls *c = &eus_java::clss[cid];
+    assert(fid < c->fns.size());
+    return c; }
+  long eus_java_call_void_method(int cid, int fid) {
+    eus_java::cls *c = __eus_java_call_method(cid,fid);
+    eus_java::env->CallVoidMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
+    return 0; }
+  long eus_java_call_long_method(int cid, int fid) {
+    eus_java::cls *c = __eus_java_call_method(cid,fid);
+    eus_java::fret.j = eus_java::env->CallLongMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
+    return 0; }
+  long eus_java_call_double_method(int cid, int fid) {
+    eus_java::cls *c = __eus_java_call_method(cid,fid);
+    eus_java::fret.d = eus_java::env->CallDoubleMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
+    return 0; }
+  long eus_java_call_string_method(int cid, int fid) {
+    eus_java::cls *c = __eus_java_call_method(cid,fid);
+    jstring str = (jstring)eus_java::env->CallObjectMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
+    eus_java::fret.l = str; return 0; }
+  long eus_java_call_larray_method(int cid, int fid) {
+    eus_java::cls *c = __eus_java_call_method(cid,fid);
+    jlongArray la = (jlongArray)eus_java::env->CallObjectMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
+    eus_java::fret.l = la; return 0; }
+  long eus_java_call_darray_method(int cid, int fid) {
+    eus_java::cls *c = __eus_java_call_method(cid,fid);
+    jdoubleArray da = (jdoubleArray)eus_java::env->CallObjectMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
+    eus_java::fret.l = da; return 0; }
+  long eus_java_return_long(long* b) { b[0] = eus_java::fret.j; return 0; }
+  long eus_java_return_double(double* b) { b[0] = eus_java::fret.d; return 0; }
+  long eus_java_return_string_length() { return eus_java::env->GetStringLength((jstring)eus_java::fret.l); }
+  long eus_java_return_string(int l, char* str) {
+    jstring js = (jstring)eus_java::fret.l;
+    const char* _str = eus_java::env->GetStringUTFChars(js, 0);
+    std::memcpy(str,_str,l*sizeof(char));
+    eus_java::env->ReleaseStringUTFChars(js, _str);
+    return 0; }
+  long eus_java_return_larray_length() { return eus_java::env->GetArrayLength((jlongArray)eus_java::fret.l); }
+  long eus_java_return_larray(int l, long* la) {
+    jlongArray jla = (jlongArray)eus_java::fret.l;
+    long *_la = eus_java::env->GetLongArrayElements(jla, 0);
+    std::memcpy(la,_la,l*sizeof(long));
+    eus_java::env->ReleaseLongArrayElements(jla, _la, 0);
+    return 0; }
+  long eus_java_return_darray_length() { return eus_java::env->GetArrayLength((jdoubleArray)eus_java::fret.l); }
+  long eus_java_return_darray(int l, double* da) {
+    jdoubleArray jda = (jdoubleArray)eus_java::fret.l;
+    double *_da = eus_java::env->GetDoubleArrayElements(jda, 0);
+    std::memcpy(da,_da,l*sizeof(double));
+    eus_java::env->ReleaseDoubleArrayElements(jda, _da, 0);
+    return 0; }
 };
 
 extern "C" { // jvm accessor
@@ -84,12 +140,6 @@ extern "C" { // jvm accessor
       std::cerr << "[eus_java] func " << _fn << _arg << " not found" << std::endl;
       return -1;}
     return eus_java::clss[cid].add(eus_java::func(mid)); }
-  long eus_java_call_method(int cid, int fid) {
-    assert(cid < eus_java::clss.size());
-    eus_java::cls *c = &eus_java::clss[cid];
-    assert(fid < c->fns.size());
-    eus_java::env->CallVoidMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
-    return 0; }
   long eus_java_destroy_vm() {
     if(!eus_java::jvm || eus_java::jvm->DestroyJavaVM()){
       std::cerr << "[eus_java] DestroyJavaVM fail" << std::endl;

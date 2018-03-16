@@ -7,7 +7,6 @@
   (defforeign create-vm lib "eus_java_create_vm" (:string) :integer)
   (defforeign add-class lib "eus_java_add_cls" (:string :string) :integer)
   (defforeign get-method lib "eus_java_get_method" (:integer :string :string) :integer)
-  (defforeign call-method lib "eus_java_call_method" (:integer :integer) :integer)
   (defforeign destroy-vm lib "eus_java_destroy_vm" () :integer)
   (defforeign test1 lib "eus_java_test1" () :integer)
   ;;
@@ -17,6 +16,21 @@
   (defforeign fargs-add-string lib "eus_java_fargs_add_string" (:string) :integer)
   (defforeign fargs-add-larray lib "eus_java_fargs_add_larray" (:integer :string) :integer)
   (defforeign fargs-add-darray lib "eus_java_fargs_add_darray" (:integer :string) :integer)
+  ;;
+  (defforeign call-void-method lib "eus_java_call_void_method" (:integer :integer) :integer)
+  (defforeign call-long-method lib "eus_java_call_long_method" (:integer :integer) :integer)
+  (defforeign call-double-method lib "eus_java_call_double_method" (:integer :integer) :integer)
+  (defforeign call-string-method lib "eus_java_call_string_method" (:integer :integer) :integer)
+  (defforeign call-larray-method lib "eus_java_call_larray_method" (:integer :integer) :integer)
+  (defforeign call-darray-method lib "eus_java_call_darray_method" (:integer :integer) :integer)
+  (defforeign return-long lib "eus_java_return_long" (:string) :integer)
+  (defforeign return-double lib "eus_java_return_double" (:string) :integer)
+  (defforeign return-string-length lib "eus_java_return_string_length" () :integer)
+  (defforeign return-string lib "eus_java_return_string" (:integer :string) :integer)
+  (defforeign return-larray-length lib "eus_java_return_larray_length" () :integer)
+  (defforeign return-larray lib "eus_java_return_larray" (:integer :string) :integer)
+  (defforeign return-darray-length lib "eus_java_return_darray_length" () :integer)
+  (defforeign return-darray lib "eus_java_return_darray" (:integer :string) :integer)
   )
 (In-package "USER")
 
@@ -40,7 +54,26 @@
       ((integer-vector-p a) (eus_java::fargs-add-larray (length a) a))
       ((float-vector-p a) (eus_java::fargs-add-darray (length a) a))
       (t (warning-message 1 "invalid arg type ~A~%" a))))
-   (eus_java::call-method cid fid)))
+   (let* ((pos (position #\) astr)) (rstr (subseq astr (+ pos 1))))
+     (cond
+      ((string-equal rstr "V") (eus_java::call-void-method cid fid))
+      ((string-equal rstr "J") (eus_java::call-long-method cid fid)
+       (let ((b #i(0))) (eus_java::return-long b) (aref b 0)))
+      ((string-equal rstr "D") (eus_java::call-double-method cid fid)
+       (let ((b #F(0))) (eus_java::return-double b) (aref b 0)))
+      ((string-equal rstr "Ljava/lang/String;")
+       (eus_java::call-string-method cid fid)
+       (let ((b (instantiate string (eus_java::return-string-length))))
+	 (eus_java::return-string (length b) b) b))
+      ((string-equal rstr "[J")
+       (eus_java::call-larray-method cid fid)
+       (let ((b (instantiate integer-vector (eus_java::return-larray-length))))
+	 (eus_java::return-larray (length b) b) b))
+      ((string-equal rstr "[D")
+       (eus_java::call-darray-method cid fid)
+       (let ((b (instantiate float-vector (eus_java::return-darray-length))))
+	 (eus_java::return-darray (length b) b) b))))))
+
 
 (defun eus_java::test2
   nil
@@ -48,7 +81,7 @@
   (eus_java::fargs-clear)
   (setq eus_java::*test-cid* (eus_java::add-class "Test" "()V"))
   (setq eus_java::*v-fid* (eus_java::get-method eus_java::*test-cid* "v" "()V"))
-  (eus_java::call-method eus_java::*test-cid* eus_java::*v-fid*)
+  (eus_java::call-void-method eus_java::*test-cid* eus_java::*v-fid*)
   (eus_java::destroy-vm))
 
 (defun eus_java::test3
@@ -59,7 +92,7 @@
   (setq eus_java::*test-cid* (eus_java::add-class "Test" "(Ljava/lang/String;)V"))
   (eus_java::fargs-clear)
   (setq eus_java::*v-fid* (eus_java::get-method eus_java::*test-cid* "v" "()V"))
-  (eus_java::call-method eus_java::*test-cid* eus_java::*v-fid*)
+  (eus_java::call-void-method eus_java::*test-cid* eus_java::*v-fid*)
   (eus_java::destroy-vm))
 
 (defun eus_java::test4
@@ -70,21 +103,21 @@
   (setq eus_java::*test-cid* (eus_java::add-class "Test" "(Ljava/lang/String;)V"))
   ;;
   (setq eus_java::*test-vf* (instance eus_java::__func :init eus_java::*test-cid* "v" "()V"))
-  (send eus_java::*test-vf* :eval)
+  (print (send eus_java::*test-vf* :eval))
   ;;
   (setq eus_java::*test-lf* (instance eus_java::__func :init eus_java::*test-cid* "l" "(J)J"))
-  (send eus_java::*test-lf* :eval 3)
+  (print (send eus_java::*test-lf* :eval 3))
   ;;
   (setq eus_java::*test-df* (instance eus_java::__func :init eus_java::*test-cid* "d" "(D)D"))
-  (send eus_java::*test-df* :eval 3.14)
+  (print (send eus_java::*test-df* :eval 3.14))
   ;;
   (setq eus_java::*test-sf* (instance eus_java::__func :init eus_java::*test-cid* "s" "(Ljava/lang/String;)Ljava/lang/String;"))
-  (send eus_java::*test-sf* :eval "piyo")
+  (print (send eus_java::*test-sf* :eval "piyo"))
   ;;
   (setq eus_java::*test-lvf* (instance eus_java::__func :init eus_java::*test-cid* "lv" "([J)[J"))
-  (send eus_java::*test-lvf* :eval #i(1 2 3))
+  (print (send eus_java::*test-lvf* :eval #i(1 2 3)))
   ;;
   (setq eus_java::*test-dvf* (instance eus_java::__func :init eus_java::*test-cid* "dv" "([D)[D"))
-  (send eus_java::*test-dvf* :eval #F(1.1 2.2 3.3))
+  (print (send eus_java::*test-dvf* :eval #F(1.1 2.2 3.3)))
   ;;
   (eus_java::destroy-vm))
