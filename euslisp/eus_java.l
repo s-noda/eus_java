@@ -8,7 +8,6 @@
   (defforeign _add-class lib "eus_java_add_cls" (:string :string) :integer)
   (defforeign get-method lib "eus_java_get_method" (:integer :string :string) :integer)
   (defforeign destroy-vm lib "eus_java_destroy_vm" () :integer)
-  (defforeign test1 lib "eus_java_test1" () :integer)
   ;;
   (defforeign fargs-clear lib "eus_java_fargs_clear" () :integer)
   (defforeign fargs-add-long lib "eus_java_fargs_add_long" (:integer) :integer)
@@ -31,6 +30,12 @@
   (defforeign return-larray lib "eus_java_return_larray" (:integer :string) :integer)
   (defforeign return-darray-length lib "eus_java_return_darray_length" () :integer)
   (defforeign return-darray lib "eus_java_return_darray" (:integer :string) :integer)
+  ;;
+  (defforeign test-funcall lib "eus_java_test_funcall" () :integer)
+  (defforeign _test-exponential-cpp lib "eus_java_test_exponential" (:string :double :integer) :integer)
+  (defun test-exponential-cpp (d s) (let ((b #F(0))) (_test-exponential-cpp b d s) (aref b 0)))
+  (defforeign _test-pi-cpp lib "eus_java_test_pi" (:string :integer) :integer)
+  (defun test-pi-cpp (s) (let ((b #F(0))) (_test-pi-cpp b s) (aref b 0)))
   )
 (In-package "USER")
 

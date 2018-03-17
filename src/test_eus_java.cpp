@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <iostream>
 #include <cassert>
+#include <cmath>
 
 namespace eus_java {
   jmethodID _getm(JNIEnv *env, jclass &cls, const char* name, const char* arg) {
@@ -9,7 +10,7 @@ namespace eus_java {
     assert(mid);
     return mid; }
 
-  int test1() {
+  long test_funcall() {
     JNIEnv *env;
     JavaVM *jvm;
 
@@ -84,6 +85,14 @@ namespace eus_java {
 
     std::cout << "test passed" << std::endl;
     return 0; }
+
+  double test_exponential(double d, long s) {
+    if (s == 0) return 1; return d * eus_java::test_exponential(d, s-1); }
+
+  double test_pi(long l) {
+    double r = 0;
+    while ((l -= 1) > 0) r += 1.0/(l*l);
+    return std::sqrt(6*r); }
 };
 
-int main() { return eus_java::test1(); }
+int main() { return eus_java::test_funcall(); }

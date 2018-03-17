@@ -11,6 +11,8 @@
 (eus_java::jdefun eus_java::test-s eus_java::*test-cid* "s" (:string) :string)
 (eus_java::jdefun eus_java::test-lv eus_java::*test-cid* "lv" (:larray) :larray)
 (eus_java::jdefun eus_java::test-dv eus_java::*test-cid* "dv" (:darray) :darray)
+(eus_java::jdefun eus_java::test-exponential-java eus_java::*test-cid* "test_exponential" (:double :long) :double)
+(eus_java::jdefun eus_java::test-pi-java eus_java::*test-cid* "test_pi" (:long) :double)
 
 (defun eus_java::test-test
   nil
@@ -21,11 +23,79 @@
   (print (eus_java::test-lv #i(1 2 3)))
   (print (eus_java::test-dv #F(1.1 2.2 3.3))))
 
-(let* ((ff '(lambda (str) (and (stringp str) (> (length str) 2) (eq (aref str 0) #\-))))
-       (flag (find-if ff lisp::*eustop-argument*)) (stm 10) (mtm 15))
+(defun eus_java::test-exponential-eus (d l)
+  (if (zerop l) 1 (* d (eus_java::test-exponential-eus d (- l 1)))))
+
+(defun eus_java::test-pi-eus (i)
+  (let ((p 0))
+    (while (> (setq i (- i 1)) 0)
+      (setq p (+ p (/ 1.0 (* i i)))))
+    (sqrt (* 6 p))))
+
+(defun eus_java::test-calc-comp-func
+  (f a r) (list 'lambda '(i) (list 'bench2 (list 'if (list 'not (list 'eps= (cons f a) r)) '(throw :test-calc-inconsistent nil)))))
+(defun eus_java::length-str (str len)
+  (if (numberp str) (setq str (format nil "~1,6f" str)))
   (cond
-   ((substringp "run-test" flag)
-    (eus_java::test-test)
+   ((eq (length str) len) str)
+   ((> (length str) len) (subseq str 0 len))
+   (t
+    (let ((ret (instantiate string len))
+	  (i 0) (slen (- len (length str))))
+      (while (< i slen) (aset ret i #\ ) (setq i (+ i 1)))
+      (while (< i len)
+	(aset ret i (aref str (- i slen)))
+	(setq i (+ i 1)))
+      ret))))
+(defun eus_java::test-calc-comp
+  (cnt fe fc fj args)
+  (let* ((l 8) (b (make-list cnt)) retv reft re rc rj)
+    (format t "~A times calculation of ~A~%" cnt fe)
+    (setq reft (bench2 (setq refv (apply fe args))))
+    (format t "euslisp reference = ~A in ~A [s]~%" refv reft)
+    (format t "~A||~A|~A|~A~%"
+	    (eus_java::length-str "LANG" l)
+	    (eus_java::length-str "AVE[s]" l)
+	    (eus_java::length-str "MIN[s]" l)
+	    (eus_java::length-str "MAX[s]" l))
+    (format t "~A||~A|~A|~A~%"
+	    (eus_java::length-str "EUS" l)
+	    (eus_java::length-str reft l)
+	    (eus_java::length-str "-" l)
+	    (eus_java::length-str "-" l))
+    (setq rc (eus_java::test-calc-comp-func fc args refv)
+	  rc (mapcar rc b))
+    (format t "~A||~A|~A|~A~%"
+	    (eus_java::length-str "CPP" l)
+	    (eus_java::length-str (/ (apply '+ rc) cnt) l)
+	    (eus_java::length-str (apply 'min rc) l)
+	    (eus_java::length-str (apply 'max rc) l))
+    (setq rj (eus_java::test-calc-comp-func fj args refv)
+	  rj (mapcar rj b))
+    (format t "~A||~A|~A|~A~%"
+	    (eus_java::length-str "JAVA" l)
+	    (eus_java::length-str (/ (apply '+ rj) cnt) l)
+	    (eus_java::length-str (apply 'min rj) l)
+	    (eus_java::length-str (apply 'max rj) l))
+    t))
+
+(let* ((test-flag
+	(find-if
+	 '(lambda (str)
+	    (and (stringp str)
+		 (> (length str) (length "--test"))
+		 (string-equal (subseq str 0 (length "--test"))
+			       "--test")))
+	 lisp::*eustop-argument*)))
+  (cond
+   (test-flag
+    (cond
+     ((substringp "funcall" test-flag)
+      (eus_java::test-test))
+     ((substringp "exp" test-flag))
+     ((substringp "pi" test-flag)
+      (eus_java::test-calc-comp 100 'eus_java::test-pi-eus 'eus_java::test-pi-cpp 'eus_java::test-pi-java '(1000000)))
+     (t (warning-message 1 "test_eus_java.l unknown test-flag ~A~%" test-flag)))
     (eus_java::destroy-vm)
     (exit))))
 

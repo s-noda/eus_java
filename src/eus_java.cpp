@@ -146,5 +146,8 @@ extern "C" { // jvm accessor
       return -1; }
     std::cout << "[eus_java] JVM close" << std::endl;
     return 0; }
-  long eus_java_test1() { return eus_java::test1();}
+  //
+  long eus_java_test_funcall() { return eus_java::test_funcall();}
+  long eus_java_test_exponential(double *b, double d, long s) { b[0] = eus_java::test_exponential(d, s); return 0; }
+  long eus_java_test_pi(double *b, long l) { b[0] = eus_java::test_pi(l); return 0; }
 };

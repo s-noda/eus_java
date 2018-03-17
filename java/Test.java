@@ -9,8 +9,14 @@ public class Test {
     public void v() { this._log("void test"); return; }
     public long l(long l) { this._log("long test"); return 2*l; }
     public double d(double d) { this._log("double test"); return 10*d; }
-    //
     public String s(String s) { this._log("string test"); return ("hello " + s); }
     public long[] lv(long[] lv) {  this._log("lvector test"); for ( int i=0; i<lv.length; i++ ) lv[i] = 2*lv[i]; return lv; }
     public double[] dv(double[] dv) {  this._log("dvector test"); for ( int i=0; i<dv.length; i++ ) dv[i] = 10*dv[i]; return dv; }
+
+    public double test_exponential (double d, long l) {
+	if ( l == 0 ) { return 1; } else { return d * this.test_exponential(d, l-1); }}
+    public double test_pi (long l) {
+	double r = 0;
+	while ((l -= 1) > 0) r += 1.0/(l*l);
+	return (r = Math.sqrt(6*r)); }
 }
