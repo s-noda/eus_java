@@ -24,7 +24,8 @@
   (print (eus_java::test-dv #F(1.1 2.2 3.3))))
 
 (defun eus_java::test-exponential-eus (d l)
-  (if (zerop l) 1 (* d (eus_java::test-exponential-eus d (- l 1)))))
+  (let ((r d))
+    (while (> (setq l (- l 1)) 0) (setq r (* r d))) r))
 
 (defun eus_java::test-pi-eus (i)
   (let ((p 0))
@@ -59,10 +60,15 @@
 	    (eus_java::length-str "MIN[s]" l)
 	    (eus_java::length-str "MAX[s]" l))
     (format t "~A||~A|~A|~A~%"
+	    (eus_java::length-str "---------" l)
+	    (eus_java::length-str "---------" l)
+	    (eus_java::length-str "---------" l)
+	    (eus_java::length-str "---------" l))
+    (format t "~A||~A|~A|~A~%"
 	    (eus_java::length-str "EUS" l)
 	    (eus_java::length-str reft l)
-	    (eus_java::length-str "-" l)
-	    (eus_java::length-str "-" l))
+	    (eus_java::length-str "once" l)
+	    (eus_java::length-str "once" l))
     (setq rc (eus_java::test-calc-comp-func fc args refv)
 	  rc (mapcar rc b))
     (format t "~A||~A|~A|~A~%"
@@ -89,16 +95,19 @@
 	 lisp::*eustop-argument*)))
   (cond
    (test-flag
+    (sys::gc)
     (cond
      ((substringp "funcall" test-flag)
       (eus_java::test-test))
-     ((substringp "exp" test-flag))
+     ((substringp "exp" test-flag)
+      (eus_java::test-calc-comp 100 'eus_java::test-exponential-eus 'eus_java::test-exponential-cpp 'eus_java::test-exponential-java '(1.000001 1000000)))
      ((substringp "pi" test-flag)
       (eus_java::test-calc-comp 100 'eus_java::test-pi-eus 'eus_java::test-pi-cpp 'eus_java::test-pi-java '(1000000)))
      (t (warning-message 1 "test_eus_java.l unknown test-flag ~A~%" test-flag)))
     (eus_java::destroy-vm)
     (exit))))
 
+#|
 ;; @deprecated
 (defclass eus_java::__func
   :super object

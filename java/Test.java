@@ -14,7 +14,9 @@ public class Test {
     public double[] dv(double[] dv) {  this._log("dvector test"); for ( int i=0; i<dv.length; i++ ) dv[i] = 10*dv[i]; return dv; }
 
     public double test_exponential (double d, long l) {
-	if ( l == 0 ) { return 1; } else { return d * this.test_exponential(d, l-1); }}
+	double r = d;
+	while ((l -= 1) > 0) r *= d;
+	return r; }
     public double test_pi (long l) {
 	double r = 0;
 	while ((l -= 1) > 0) r += 1.0/(l*l);

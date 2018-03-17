@@ -87,8 +87,9 @@ namespace eus_java {
     return 0; }
 
   double test_exponential(double d, long s) {
-    if (s == 0) return 1; return d * eus_java::test_exponential(d, s-1); }
-
+    double r = d;
+    while ((s -= 1) > 0) r *= d;
+    return r; }
   double test_pi(long l) {
     double r = 0;
     while ((l -= 1) > 0) r += 1.0/(l*l);
