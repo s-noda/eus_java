@@ -3,9 +3,7 @@
 (require "package://eus_java/euslisp/eus_java.l")
 
 (eus_java::create-vm (format nil "~A/java" (ros::rospack-find "eus_java")))
-(eus_java::fargs-clear)
-(eus_java::fargs-add-string (format nil "[~A]" (car (piped-fork-returns-list "LANG=C date"))))
-(setq eus_java::*test-cid* (eus_java::add-class "Test" (eus_java::arg-keylist2string '(:string) nil)))
+(setq eus_java::*test-cid* (eus_java::add-class "Test" (list (format nil "test_eus_java_~A" (car (unix::gettimeofday))))))
 
 (eus_java::jdefun eus_java::test-v eus_java::*test-cid* "v" () nil)
 (eus_java::jdefun eus_java::test-l eus_java::*test-cid* "l" (:long) :long)

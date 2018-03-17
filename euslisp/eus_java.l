@@ -5,7 +5,7 @@
 (In-package "EUS_JAVA")
 (let* ((lib (load-foreign (format nil "~A/libeus_java.so" (ros::rospack-find "eus_java")))))
   (defforeign create-vm lib "eus_java_create_vm" (:string) :integer)
-  (defforeign add-class lib "eus_java_add_cls" (:string :string) :integer)
+  (defforeign _add-class lib "eus_java_add_cls" (:string :string) :integer)
   (defforeign get-method lib "eus_java_get_method" (:integer :string :string) :integer)
   (defforeign destroy-vm lib "eus_java_destroy_vm" () :integer)
   (defforeign test1 lib "eus_java_test1" () :integer)
@@ -44,11 +44,13 @@
   (apply 'concatenate string "("
 	 (append (mapcar 'eus_java::arg-key2string argl)
 		 (list ")" (eus_java::arg-key2string ret)))))
+
 (defun eus_java::alphabet-symbol-list
   (&optional (d 10) (st #\a))
   (if (zerop d) nil
     (cons (read-from-string (format nil "~c" st))
 	  (eus_java::alphabet-symbol-list (- d 1) (+ st 1)))))
+
 (defmacro eus_java::jdefun
   (fname _cid jfname jarg jret)
   (let* ((cid (if (symbolp _cid) (eval _cid) _cid))
@@ -96,3 +98,20 @@
 			   buf (instantiate float-vector l))))
 	       (eus_java::return-darray l b) b))))))
 
+(defun eus_java::fargs-add (a)
+  (cond
+   ((integerp a) (eus_java::fargs-add-long a) :long)
+   ((floatp a) (eus_java::fargs-add-double a) :double)
+   ((stringp a) (eus_java::fargs-add-string a) :string)
+   ((integer-vector-p a)
+    (eus_java::fargs-add-larray (length a) a) :larray)
+   ((float-vector-p a)
+    (eus_java::fargs-add-darray (length a) a) :darray)))
+
+(defun eus_java::add-class
+  (cname args)
+  (eus_java::fargs-clear)
+  (eus_java::_add-class
+   cname
+   (eus_java::arg-keylist2string
+    (mapcar 'eus_java::fargs-add args) nil)))
