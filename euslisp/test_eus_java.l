@@ -2,8 +2,9 @@
 
 (require "package://eus_java/euslisp/eus_java.l")
 
-(eus_java::create-vm (format nil "~A/java" (ros::rospack-find "eus_java")))
-(setq eus_java::*test-cid* (eus_java::add-class "Test" (list (format nil "test_eus_java_~A" (car (unix::gettimeofday))))))
+(let ((pkg (ros::rospack-find "eus_java")))
+  (eus_java::create-vm (format nil "~A/java" pkg)))
+(setq eus_java::*test-cid* (eus_java::add-class "Test" (format nil "test_eus_java_~A" (car (unix::gettimeofday)))))
 
 (eus_java::jdefun eus_java::test-v eus_java::*test-cid* "v" () nil)
 (eus_java::jdefun eus_java::test-l eus_java::*test-cid* "l" (:long) :long)

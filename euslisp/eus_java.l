@@ -114,7 +114,7 @@
     (eus_java::fargs-add-darray (length a) a) :darray)))
 
 (defun eus_java::add-class
-  (cname args)
+  (cname &rest args)
   (eus_java::fargs-clear)
   (eus_java::_add-class
    cname
