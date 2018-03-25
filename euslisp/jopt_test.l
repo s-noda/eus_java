@@ -18,15 +18,47 @@
 (eus_java::jdefun eus_java::set-quadratic-objective eus_java::*jopt* "setQuadraticObjective" (:darray :darray :double) nil)
 (eus_java::jdefun eus_java::set-linear-equality eus_java::*jopt* "setLinearEquality" (:darray :darray) nil)
 (eus_java::jdefun eus_java::set-linear-inequality eus_java::*jopt* "setLinearInequality" (:darray :darray) nil)
+(eus_java::jdefun eus_java::set-linear-min-max-inequality eus_java::*jopt* "setLinearMinMaxInequality" (:darray :darray :darray) nil)
 (eus_java::jdefun eus_java::optimize eus_java::*jopt* "optimize" () :long)
 (eus_java::jdefun eus_java::solution eus_java::*jopt* "solution" () :darray)
 
-(defun eus_java::jopt-test1
+;; (defvar eus_java::*test-lb* (fill (instantiate float-vector 3) -1000))
+;; (defvar eus_java::*test-ub* (fill (instantiate float-vector 3) +1000))
+(defvar eus_java::*test-ineq-mat*
+  (let ((mu -0.3) (m (make-matrix 4 3)))
+    (aset m 0 0 +1) (aset m 0 2 mu)
+    (aset m 1 1 +1) (aset m 1 2 mu)
+    (aset m 2 0 -1) (aset m 2 2 mu)
+    (aset m 3 1 -1) (aset m 3 2 mu)
+    m))
+(defvar eus_java::*test-ineq-max* (float-vector 0 0 0 0))
+(defvar eus_java::*test-guess* (float-vector 0 0 9.8))
+
+(defun eus_java::jopt-test-qp-eiquadprog
   nil
+  (require "package://eus_qpoases/euslisp/eus-qpoases.l")
+  (solve-qpoases-qp
+   :eval-weight-matrix (unit-matrix 3)
+   ;; :state-min-vector eus_java::*test-lb*
+   ;; :state-max-vector eus_java::*test-ub*
+   :inequality-matrix eus_java::*test-ineq-mat*
+   ;; :inequality-min-vector eus_java::*test-ineq-min*
+   :inequality-max-vector eus_java::*test-ineq-max*
+   ))
+
+(defun eus_java::jopt-test-qp
+  (&key (d 3))
   (eus_java::clear-request)
-  (eus_java::set-tolerance 1e-3)
-  (eus_java::set-initial-guess #F(1 1))
-  (eus_java::set-quadratic-objective #F(1 0 0 1) #F(0 0) 0)
+  (eus_java::set-tolerance 1e-9)
+  (eus_java::set-initial-guess eus_java::*test-guess*)
+  (eus_java::set-quadratic-objective
+   (send (unit-matrix d) :get-val 'entity)
+   (instantiate float-vector d) 0)
+  ;; (eus_java::set-linear-min-max-inequality
+  (eus_java::set-linear-inequality
+   (send eus_java::*test-ineq-mat* :get-val 'entity)
+   ;; eus_java::*test-ineq-min*
+   eus_java::*test-ineq-max*)
   (if (plusp (eus_java::optimize))
       (print (eus_java::solution))
     (print 'failed)))

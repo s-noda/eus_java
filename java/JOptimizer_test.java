@@ -42,11 +42,23 @@ public class JOptimizer_test {
     public void setLinearInequality(double[] _G, double[] h) {
 	//inequalities Gx < h
 	int m = h.length; int n = _G.length/m;
-	double[][] G = new double[m][n];
 	ConvexMultivariateRealFunction[] ie = new ConvexMultivariateRealFunction[m];
 	for ( int i=0; i<m; i++ ) {
-	    for ( int j=0; j<n; j++ ) G[i][j] = _G[i*n+j];
-	    ie[i] = new LinearMultivariateRealFunction(G[i], h[i]); }
+	    double[] G = new double[n];
+	    for ( int j=0; j<n; j++ ) G[j] = _G[i*n+j];
+	    ie[i] = new LinearMultivariateRealFunction(G, h[i]); }
+	this.or.setFi(ie); }
+    public void setLinearMinMaxInequality(double[] _G, double[] lh, double[] uh) {
+	//inequalities lh < Gx < uh
+	int m = lh.length; int n = _G.length/m;
+	ConvexMultivariateRealFunction[] ie = new ConvexMultivariateRealFunction[2*m];
+	for ( int i=0; i<m; i++ ) {
+	    double[] lG = new double[n];
+	    double[] uG = new double[n];
+	    for ( int j=0; j<n; j++ ) {
+		uG[j] = _G[i*n+j]; lG[j] = -1 * _G[i*n+j]; }
+	    ie[2*i] = new LinearMultivariateRealFunction(uG, uh[i]);
+	    ie[2*i+1] = new LinearMultivariateRealFunction(lG, -1*lh[i]);}
 	this.or.setFi(ie); }
     // public void setLinearInequality(double[] _G, double[] h) {
     // 	//inequalities Gx < h
