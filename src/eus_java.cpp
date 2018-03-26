@@ -5,7 +5,7 @@
 #include <cstring>
 #include "test_eus_java.cpp"
 
-namespace eus_java {
+namespace eus_java { // class def
   class func {
   public:
     jmethodID mid;
@@ -21,34 +21,59 @@ namespace eus_java {
   };
 };
 
+namespace eus_java { // arg def
+  const int LONG=1, DOUBLE=2, STRING=100, LARRAY=101, DARRAY=102;
+  bool isObject(int i) { return (i>99); } };
+namespace eus_java {
+  std::vector<jvalue> fargs;
+  std::vector<int> fargs_types;
+  long addfarg(jvalue v, int tp) {
+    fargs.push_back(v); fargs_types.push_back(tp);
+    return fargs.size(); }
+  long addfarg(jlong _v) { jvalue v; v.j = _v;
+    return addfarg(v, eus_java::LONG); }
+  long addfarg(jdouble _v) { jvalue v; v.d = _v;
+    return addfarg(v, eus_java::DOUBLE); }
+  long addfarg(jstring _v) { jvalue v; v.l = _v;
+    return addfarg(v, eus_java::STRING); }
+  long addfarg(jlongArray _v) { jvalue v; v.l = _v;
+    return addfarg(v, eus_java::LARRAY); }
+  long addfarg(jdoubleArray _v) { jvalue v; v.l = _v;
+    return addfarg(v, eus_java::DARRAY); }
+  void clearfargs(JNIEnv *env) {
+    for ( int i=0; i<eus_java::fargs.size(); i++ )
+      if ( eus_java::isObject(eus_java::fargs_types[i]) )
+	env->DeleteGlobalRef(eus_java::fargs[i].l);
+    eus_java::fargs.clear();
+    eus_java::fargs_types.clear(); }
+  jvalue fret() { return fargs[fargs.size()-1]; }
+};
+
 namespace eus_java {
   JNIEnv *env;
   JavaVM *jvm;
   JavaVMInitArgs vm_args;
   std::vector<eus_java::cls> clss;
-  std::vector<jvalue> fargs;
-  jvalue fret;
-  long __addfarg(jvalue &v) {
-    fargs.push_back(v); return fargs.size(); }
 };
 
 extern "C" { // function argument handle
-  long eus_java_fargs_clear() { eus_java::fargs.clear(); return 0; }
+  long eus_java_fargs_clear() {
+    eus_java::clearfargs(eus_java::env); return 0; }
   long eus_java_fargs_add_long(long l) {
-    jvalue v; v.j = l; return eus_java::__addfarg(v); }
+    return eus_java::addfarg((jlong)l); }
   long eus_java_fargs_add_double(double d) {
-    jvalue v; v.d = d; return eus_java::__addfarg(v); }
+    return eus_java::addfarg((jdouble)d); }
   long eus_java_fargs_add_string(char* _cl) {
     jstring cl = eus_java::env->NewStringUTF(_cl);
-    jvalue v; v.l = cl; return eus_java::__addfarg(v); }
+    return eus_java::addfarg(cl); }
   long eus_java_fargs_add_darray(long s, double* _dl) {
     jdoubleArray dl = eus_java::env->NewDoubleArray(s);
     eus_java::env->SetDoubleArrayRegion(dl, 0, s, _dl);
-    jvalue v; v.l = dl; return eus_java::__addfarg(v); }
+    return eus_java::addfarg(dl); }
   long eus_java_fargs_add_larray(long s, long* _ll) {
     jlongArray ll = eus_java::env->NewLongArray(s);
     eus_java::env->SetLongArrayRegion(ll, 0, s, _ll);
-    jvalue v; v.l = ll; return eus_java::__addfarg(v); }
+    return eus_java::addfarg(ll); }
 };
 
 extern "C" { // function ret handle
@@ -63,43 +88,43 @@ extern "C" { // function ret handle
     return 0; }
   long eus_java_call_long_method(int cid, int fid) {
     eus_java::cls *c = __eus_java_call_method(cid,fid);
-    eus_java::fret.j = eus_java::env->CallLongMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
-    return 0; }
+    jlong v = eus_java::env->CallLongMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
+    return eus_java::addfarg(v); }
   long eus_java_call_double_method(int cid, int fid) {
     eus_java::cls *c = __eus_java_call_method(cid,fid);
-    eus_java::fret.d = eus_java::env->CallDoubleMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
-    return 0; }
+    jdouble v = eus_java::env->CallDoubleMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
+    return eus_java::addfarg(v); }
   long eus_java_call_string_method(int cid, int fid) {
     eus_java::cls *c = __eus_java_call_method(cid,fid);
     jstring str = (jstring)eus_java::env->CallObjectMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
-    eus_java::fret.l = str; return 0; }
+    return eus_java::addfarg(str); }
   long eus_java_call_larray_method(int cid, int fid) {
     eus_java::cls *c = __eus_java_call_method(cid,fid);
     jlongArray la = (jlongArray)eus_java::env->CallObjectMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
-    eus_java::fret.l = la; return 0; }
+    return eus_java::addfarg(la); }
   long eus_java_call_darray_method(int cid, int fid) {
     eus_java::cls *c = __eus_java_call_method(cid,fid);
     jdoubleArray da = (jdoubleArray)eus_java::env->CallObjectMethodA(c->o, c->fns[fid].mid, &eus_java::fargs[0]);
-    eus_java::fret.l = da; return 0; }
-  long eus_java_return_long(long* b) { b[0] = eus_java::fret.j; return 0; }
-  long eus_java_return_double(double* b) { b[0] = eus_java::fret.d; return 0; }
-  long eus_java_return_string_length() { return eus_java::env->GetStringLength((jstring)eus_java::fret.l); }
+    return eus_java::addfarg(da); }
+  long eus_java_return_long(long* b) { b[0] = eus_java::fret().j; return 0; }
+  long eus_java_return_double(double* b) { b[0] = eus_java::fret().d; return 0; }
+  long eus_java_return_string_length() { return eus_java::env->GetStringLength((jstring)eus_java::fret().l); }
   long eus_java_return_string(int l, char* str) {
-    jstring js = (jstring)eus_java::fret.l;
+    jstring js = (jstring)eus_java::fret().l;
     const char* _str = eus_java::env->GetStringUTFChars(js, 0);
     std::memcpy(str,_str,l*sizeof(char));
     eus_java::env->ReleaseStringUTFChars(js, _str);
     return 0; }
-  long eus_java_return_larray_length() { return eus_java::env->GetArrayLength((jlongArray)eus_java::fret.l); }
+  long eus_java_return_larray_length() { return eus_java::env->GetArrayLength((jlongArray)eus_java::fret().l); }
   long eus_java_return_larray(int l, long* la) {
-    jlongArray jla = (jlongArray)eus_java::fret.l;
+    jlongArray jla = (jlongArray)eus_java::fret().l;
     long *_la = eus_java::env->GetLongArrayElements(jla, 0);
     std::memcpy(la,_la,l*sizeof(long));
     eus_java::env->ReleaseLongArrayElements(jla, _la, 0);
     return 0; }
-  long eus_java_return_darray_length() { return eus_java::env->GetArrayLength((jdoubleArray)eus_java::fret.l); }
+  long eus_java_return_darray_length() { return eus_java::env->GetArrayLength((jdoubleArray)eus_java::fret().l); }
   long eus_java_return_darray(int l, double* da) {
-    jdoubleArray jda = (jdoubleArray)eus_java::fret.l;
+    jdoubleArray jda = (jdoubleArray)eus_java::fret().l;
     double *_da = eus_java::env->GetDoubleArrayElements(jda, 0);
     std::memcpy(da,_da,l*sizeof(double));
     eus_java::env->ReleaseDoubleArrayElements(jda, _da, 0);
